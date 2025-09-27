@@ -1,4 +1,4 @@
-package com.fabricaescuela.models.jpaEntitys;
+package com.fabricaescuela.models.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;

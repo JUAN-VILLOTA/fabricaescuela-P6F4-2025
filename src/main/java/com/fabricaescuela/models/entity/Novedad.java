@@ -1,4 +1,4 @@
-package com.fabricaescuela.models.jpaEntitys;
+package com.fabricaescuela.models.entity;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
@@ -11,7 +11,7 @@ import java.time.LocalDate;
 @Setter
 @Entity
 @Table(name = "\"Novedades\"")
-public class Novedade {
+public class Novedad {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "\"idNovedad\"", nullable = false)

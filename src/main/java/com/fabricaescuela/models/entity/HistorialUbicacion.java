@@ -1,4 +1,4 @@
-package com.fabricaescuela.models.jpaEntitys;
+package com.fabricaescuela.models.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -10,7 +10,7 @@ import java.time.Instant;
 @Setter
 @Entity
 @Table(name = "\"HistorialUbicaciones\"")
-public class HistorialUbicacione {
+public class HistorialUbicacion {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "\"idHistorialUbicacion\"", nullable = false)
