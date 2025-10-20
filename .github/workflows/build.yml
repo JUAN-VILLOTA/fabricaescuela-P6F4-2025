@@ -6,7 +6,7 @@ on:
   #Trigger the workflow on push from the main branch
   push:
     branches:
-      - develop
+      - main
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
