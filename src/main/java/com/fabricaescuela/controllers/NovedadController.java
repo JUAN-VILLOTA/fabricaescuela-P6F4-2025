@@ -145,7 +145,6 @@ public class NovedadController {
     }
 
     @Operation(summary = "Obtener todas las novedades", description = "Retorna el listado completo de novedades")
-    @PreAuthorize("hasAuthority('NOVEDAD_VIEW')")
     @GetMapping
     public ResponseEntity<?> obtenerTodasLasNovedades() {
         try {
@@ -172,7 +171,6 @@ public class NovedadController {
     }
 
     @Operation(summary = "Obtener novedad por ID", description = "Retorna una novedad específica por su identificador")
-    @PreAuthorize("hasAuthority('NOVEDAD_VIEW')")
     @GetMapping("/{id}")
     public ResponseEntity<?> obtenerNovedadPorId(@PathVariable("id") Integer id) {
         Optional<Novedad> novedadOpt = novedadService.obtenerNovedadPorId(id);
@@ -191,7 +189,6 @@ public class NovedadController {
         summary = "Obtener novedades por ID de paquete", 
         description = "Retorna todas las novedades asociadas a un paquete específico (historial de incidencias)"
     )
-    @PreAuthorize("hasAuthority('NOVEDAD_VIEW')")
     @GetMapping("/paquete/{idPaquete}")
     public ResponseEntity<?> obtenerNovedadesPorPaquete(@PathVariable Integer idPaquete) {
         try {
