@@ -8,6 +8,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,6 +30,9 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
 @RestController
 @RequestMapping("/api/paquetes")
 @Tag(name = "Paquetes", description = "API para gestión de paquetes")
@@ -40,20 +45,67 @@ public class PaqueteController {
     }
 
     @Operation(summary = "Consultar todos los paquetes",
-            description = "Retorna la lista de paquetes con su estado actual")
+            description = "Retorna la lista de paquetes con su estado actual y enlaces HATEOAS")
     @GetMapping
-    public ResponseEntity<List<PaqueteResponseDto>> obtenerTodos() {
-        return ResponseEntity.ok(paqueteService.obtenerTodos());
+    public ResponseEntity<CollectionModel<EntityModel<PaqueteResponseDto>>> obtenerTodos() {
+        List<PaqueteResponseDto> paquetes = paqueteService.obtenerTodos();
+        
+        // Convertir cada DTO en EntityModel con sus propios enlaces
+        List<EntityModel<PaqueteResponseDto>> paquetesConEnlaces = paquetes.stream()
+            .map(paquete -> {
+                EntityModel<PaqueteResponseDto> entityModel = EntityModel.of(paquete);
+                // Agregar enlace "self" a cada paquete individual
+                entityModel.add(linkTo(methodOn(PaqueteController.class)
+                    .consultarPorCodigo(paquete.getCodigoPaquete())).withSelfRel());
+                // Agregar enlace para actualizar dirección
+                entityModel.add(linkTo(methodOn(PaqueteController.class)
+                    .actualizarDireccionDestino(paquete.getCodigoPaquete(), null)).withRel("actualizar-direccion"));
+                return entityModel;
+            })
+            .collect(Collectors.toList());
+        
+        // Crear CollectionModel con enlace "self" al listado completo
+        CollectionModel<EntityModel<PaqueteResponseDto>> collectionModel = CollectionModel.of(paquetesConEnlaces);
+        collectionModel.add(linkTo(methodOn(PaqueteController.class).obtenerTodos()).withSelfRel());
+        collectionModel.add(linkTo(methodOn(PaqueteController.class).obtenerPaquetesEnTransito()).withRel("en-transito"));
+        
+        return ResponseEntity.ok(collectionModel);
     }
 
     @Operation(summary = "Consultar paquete por código",
-            description = "Devuelve información detallada del paquete incluyendo estado actual, historial y novedades")
+            description = "Devuelve información detallada del paquete con enlaces HATEOAS de navegación")
     @GetMapping("/{codigo}")
     public ResponseEntity<?> consultarPorCodigo(@PathVariable String codigo) {
         Optional<PaqueteResponseDto> paqueteOpt = paqueteService.consultarPorCodigo(codigo);
         
         if (paqueteOpt.isPresent()) {
-            return ResponseEntity.ok(paqueteOpt.get());
+            PaqueteResponseDto paquete = paqueteOpt.get();
+            EntityModel<PaqueteResponseDto> entityModel = EntityModel.of(paquete);
+            
+            // Agregar enlace "self" - al mismo recurso
+            entityModel.add(linkTo(methodOn(PaqueteController.class)
+                .consultarPorCodigo(codigo)).withSelfRel());
+            
+            // Agregar enlace "all-paquetes" - volver al listado completo
+            entityModel.add(linkTo(methodOn(PaqueteController.class)
+                .obtenerTodos()).withRel("all-paquetes"));
+            
+            // Agregar enlace "actualizar-direccion"
+            entityModel.add(linkTo(methodOn(PaqueteController.class)
+                .actualizarDireccionDestino(codigo, null)).withRel("actualizar-direccion"));
+            
+            // Agregar enlace "actualizar-estado"
+            entityModel.add(linkTo(methodOn(PaqueteController.class)
+                .actualizarEstado(codigo, null)).withRel("actualizar-estado"));
+            
+            // Enlace condicional "en-transito" solo si el estado es EN_TRANSITO
+            if (paquete.getEstadoActual() != null && 
+                paquete.getEstadoActual().contains("TRANSITO")) {
+                entityModel.add(linkTo(methodOn(PaqueteController.class)
+                    .obtenerPaquetesEnTransito()).withRel("paquetes-en-transito"));
+            }
+            
+            return ResponseEntity.ok(entityModel);
         } else {
             Map<String, Object> error = new HashMap<>();
             error.put("error", "Paquete no encontrado");
@@ -65,13 +117,26 @@ public class PaqueteController {
     }
 
     @Operation(summary = "Consultar paquete en ruta por código",
-        description = "Devuelve la información del paquete únicamente si su estado actual es en ruta")
+        description = "Devuelve la información del paquete con enlaces HATEOAS si está en estado en ruta")
     @GetMapping("/en-ruta/{codigo}")
     public ResponseEntity<?> consultarEnRuta(@PathVariable String codigo) {
         Optional<PaqueteResponseDto> paqueteOpt = paqueteService.consultarEnRutaPorCodigo(codigo);
         
         if (paqueteOpt.isPresent()) {
-            return ResponseEntity.ok(paqueteOpt.get());
+            PaqueteResponseDto paquete = paqueteOpt.get();
+            EntityModel<PaqueteResponseDto> entityModel = EntityModel.of(paquete);
+            
+            // Agregar enlaces HATEOAS
+            entityModel.add(linkTo(methodOn(PaqueteController.class)
+                .consultarEnRuta(codigo)).withSelfRel());
+            entityModel.add(linkTo(methodOn(PaqueteController.class)
+                .consultarPorCodigo(codigo)).withRel("detalle-completo"));
+            entityModel.add(linkTo(methodOn(PaqueteController.class)
+                .actualizarDireccionDestino(codigo, null)).withRel("actualizar-direccion"));
+            entityModel.add(linkTo(methodOn(PaqueteController.class)
+                .obtenerTodos()).withRel("all-paquetes"));
+            
+            return ResponseEntity.ok(entityModel);
         } else {
             Map<String, Object> error = new HashMap<>();
             error.put("error", "Paquete no encontrado o no está en ruta");
@@ -149,22 +214,29 @@ public class PaqueteController {
                 return ResponseEntity.status(HttpStatus.NO_CONTENT).body(response);
             }
             
-            // Convertir entidades a DTOs
-            List<PaqueteResponseDto> paquetesDto = paquetes.stream()
-                .map(p -> PaqueteResponseDto.builder()
-                    .id(p.getId())
-                    .codigoPaquete(p.getCodigoPaquete())
-                    .remitente(p.getRemitente())
-                    .destinatario(p.getDestinatario())
-                    .destino(p.getDestino())
-                    .estadoActual(p.getIdEstadoActual() != null ? p.getIdEstadoActual().getNombreEstado() : null)
-                    .build())
+            // Convertir entidades a DTOs con enlaces HATEOAS
+            List<EntityModel<PaqueteResponseDto>> paquetesConEnlaces = paquetes.stream()
+                .map(p -> {
+                    PaqueteResponseDto dto = PaqueteResponseDto.builder()
+                        .id(p.getId())
+                        .codigoPaquete(p.getCodigoPaquete())
+                        .remitente(p.getRemitente())
+                        .destinatario(p.getDestinatario())
+                        .destino(p.getDestino())
+                        .estadoActual(p.getIdEstadoActual() != null ? p.getIdEstadoActual().getNombreEstado() : null)
+                        .build();
+                    
+                    EntityModel<PaqueteResponseDto> entityModel = EntityModel.of(dto);
+                    entityModel.add(linkTo(methodOn(PaqueteController.class)
+                        .consultarPorCodigo(dto.getCodigoPaquete())).withSelfRel());
+                    return entityModel;
+                })
                 .collect(Collectors.toList());
             
             Map<String, Object> response = new HashMap<>();
             response.put("mensaje", "Paquetes encontrados");
-            response.put("cantidad", paquetesDto.size());
-            response.put("paquetes", paquetesDto);
+            response.put("cantidad", paquetesConEnlaces.size());
+            response.put("paquetes", paquetesConEnlaces);
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
@@ -203,22 +275,31 @@ public class PaqueteController {
                 return ResponseEntity.ok(response);
             }
             
-            // Convertir entidades a DTOs
-            List<PaqueteResponseDto> paquetesDto = paquetes.stream()
-                .map(p -> PaqueteResponseDto.builder()
-                    .id(p.getId())
-                    .codigoPaquete(p.getCodigoPaquete())
-                    .remitente(p.getRemitente())
-                    .destinatario(p.getDestinatario())
-                    .destino(p.getDestino())
-                    .estadoActual(p.getIdEstadoActual() != null ? p.getIdEstadoActual().getNombreEstado() : null)
-                    .build())
+            // Convertir entidades a DTOs con enlaces HATEOAS
+            List<EntityModel<PaqueteResponseDto>> paquetesConEnlaces = paquetes.stream()
+                .map(p -> {
+                    PaqueteResponseDto dto = PaqueteResponseDto.builder()
+                        .id(p.getId())
+                        .codigoPaquete(p.getCodigoPaquete())
+                        .remitente(p.getRemitente())
+                        .destinatario(p.getDestinatario())
+                        .destino(p.getDestino())
+                        .estadoActual(p.getIdEstadoActual() != null ? p.getIdEstadoActual().getNombreEstado() : null)
+                        .build();
+                    
+                    EntityModel<PaqueteResponseDto> entityModel = EntityModel.of(dto);
+                    entityModel.add(linkTo(methodOn(PaqueteController.class)
+                        .consultarPorCodigo(dto.getCodigoPaquete())).withSelfRel());
+                    entityModel.add(linkTo(methodOn(PaqueteController.class)
+                        .consultarEnRuta(dto.getCodigoPaquete())).withRel("en-ruta"));
+                    return entityModel;
+                })
                 .collect(Collectors.toList());
             
             Map<String, Object> response = new HashMap<>();
             response.put("mensaje", "Paquetes en tránsito encontrados");
-            response.put("cantidad", paquetesDto.size());
-            response.put("paquetes", paquetesDto);
+            response.put("cantidad", paquetesConEnlaces.size());
+            response.put("paquetes", paquetesConEnlaces);
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {

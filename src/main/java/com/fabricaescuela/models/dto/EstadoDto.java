@@ -1,5 +1,7 @@
 package com.fabricaescuela.models.dto;
 
+import org.springframework.hateoas.RepresentationModel;
+
 import lombok.*;
 
 @Getter
@@ -7,7 +9,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class EstadoDto {
+public class EstadoDto extends RepresentationModel<EstadoDto> {
     private Long id;
     private String nombre;
 }

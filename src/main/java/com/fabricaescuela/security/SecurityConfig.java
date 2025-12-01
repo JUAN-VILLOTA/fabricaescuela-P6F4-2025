@@ -37,7 +37,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 // Swagger sin autenticación
-                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-resources/**", "/webjars/**").permitAll()
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/swagger-ui*/**", "/swagger-resources/**", "/webjars/**").permitAll()
                 // Error endpoint (para manejar excepciones del controller)
                 .requestMatchers("/error").permitAll()
                 // GET endpoints públicos (consultas sin JWT)

@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # Servicio de la aplicación Spring Boot
+  # ============================================
+  inventario-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fabricaescuela-inventario:latest
+    container_name: inventario-app
+    ports:
+      - "8080:8080"
+    environment:
+      # Variables de entorno para la aplicación
+      SERVER_PORT: 8080
+      
+      # Configuración JWT
+      JWT_SECRET: ${JWT_SECRET:-mySecretKeyForJWTTokenGenerationThatIsLongEnough123456789}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      
+      # Configuración CORS
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-*}
+      
+      # Conexión a base de datos (usando Neon por defecto)
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://ep-small-glitter-addxegoz-pooler.c-2.us-east-1.aws.neon.tech:5432/neondb}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-neondb_owner}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-npg_ouSG1je7lVsW}
+      
+      # Configuración Hibernate
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+      
+      # Pool de conexiones Hikari
+      HIKARI_MAX_POOL_SIZE: ${HIKARI_MAX_POOL_SIZE:-10}
+      HIKARI_IDLE_TIMEOUT: ${HIKARI_IDLE_TIMEOUT:-600000}
+      HIKARI_MAX_LIFETIME: ${HIKARI_MAX_LIFETIME:-1800000}
+      HIKARI_CONNECTION_TIMEOUT: ${HIKARI_CONNECTION_TIMEOUT:-30000}
+      
+    networks:
+      - inventario-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  inventario-network:
+    driver: bridge

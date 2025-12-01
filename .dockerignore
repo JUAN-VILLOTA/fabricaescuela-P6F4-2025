@@ -1,0 +1,32 @@
+# Ignorar archivos innecesarios para Docker build
+target/
+!target/fe.jar
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# Documentación
+*.md
+CHANGELOG-DOCUMENTACION.md
+CONTRIBUTING.md
+README.md
+SEGURIDAD-JWT-README.md
+GUIA-FRONTEND-JWT.md
+API-ENDPOINTS-CLOUD.md
+CAMBIOS-SEGURIDAD.md
+EJEMPLO-SEGURIDAD-CONTROLADOR.md
+
+# Otros
+.env
+dependency-tree.txt
